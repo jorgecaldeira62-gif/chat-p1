@@ -1,0 +1,1950 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Code Studio</title>
+<style>
+/* ============================================================
+   MÓDULO: BASE / VARIÁVEIS
+   ============================================================ */
+:root {
+    --bg:      #0d1117;
+    --bg2:     #161b22;
+    --bg3:     #21262d;
+    --border:  #30363d;
+    --text:    #c9d1d9;
+    --text2:   #8b949e;
+    --accent:  #58a6ff;
+    --green:   #3fb950;
+    --red:     #f85149;
+    --yellow:  #d29922;
+    --purple:  #bc8cff;
+    --orange:  #f0883e;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{
+    font-family:'Segoe UI',system-ui,sans-serif;
+    background:var(--bg);color:var(--text);
+    height:100vh;display:flex;flex-direction:column;overflow:hidden;
+}
+
+/* ============================================================
+   MÓDULO: HEADER
+   ============================================================ */
+.header{
+    background:var(--bg2);border-bottom:1px solid var(--border);
+    padding:8px 14px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+}
+.header h1{font-size:15px;color:var(--accent);font-weight:700;white-space:nowrap;}
+.header-controls{display:flex;gap:6px;align-items:center;flex-wrap:wrap;flex:1;}
+
+/* ============================================================
+   MÓDULO: COMPONENTES BASE (btn, select, input)
+   ============================================================ */
+select,input[type="text"],input[type="password"],input[type="number"]{
+    background:var(--bg3);border:1px solid var(--border);
+    color:var(--text);padding:5px 9px;border-radius:6px;font-size:12px;outline:none;
+}
+select:focus,input:focus{border-color:var(--accent);}
+.btn{
+    padding:5px 11px;border-radius:6px;border:1px solid var(--border);
+    background:var(--bg3);color:var(--text);cursor:pointer;font-size:12px;
+    transition:all 0.15s;white-space:nowrap;
+}
+.btn:hover{background:var(--border);}
+.btn.primary{background:var(--accent);color:#000;border-color:var(--accent);}
+.btn.primary:hover{opacity:0.85;}
+.btn.danger{background:var(--red);color:#fff;border-color:var(--red);}
+.btn.success{background:var(--green);color:#000;border-color:var(--green);}
+.btn.warn{background:var(--yellow);color:#000;border-color:var(--yellow);}
+.btn.purple{background:var(--purple);color:#000;border-color:var(--purple);}
+.btn:disabled{opacity:0.4;cursor:not-allowed;}
+
+/* ============================================================
+   MÓDULO: LAYOUT PRINCIPAL
+   ============================================================ */
+.main{display:flex;flex:1;overflow:hidden;}
+
+/* ============================================================
+   MÓDULO: SIDEBAR (conversas)
+   ============================================================ */
+.sidebar{
+    width:210px;background:var(--bg2);
+    border-right:1px solid var(--border);
+    display:flex;flex-direction:column;overflow:hidden;
+    transition:width 0.2s;
+}
+.sidebar.collapsed{width:0;overflow:hidden;}
+.sidebar-header{
+    padding:8px 10px;border-bottom:1px solid var(--border);
+    font-size:11px;color:var(--text2);text-transform:uppercase;letter-spacing:1px;
+    display:flex;justify-content:space-between;align-items:center;
+}
+.conversations{flex:1;overflow-y:auto;padding:6px;}
+.conv-item{
+    padding:7px 9px;border-radius:6px;cursor:pointer;font-size:12px;
+    margin-bottom:3px;border:1px solid transparent;
+    display:flex;justify-content:space-between;align-items:center;gap:4px;
+}
+.conv-item:hover{background:var(--bg3);}
+.conv-item.active{background:var(--bg3);border-color:var(--accent);}
+.conv-title{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;}
+.conv-meta{font-size:10px;color:var(--text2);}
+.conv-delete{color:var(--red);cursor:pointer;font-size:13px;opacity:0;flex-shrink:0;}
+.conv-item:hover .conv-delete{opacity:1;}
+
+/* ============================================================
+   MÓDULO: ÁREA DE CHAT
+   ============================================================ */
+.chat-area{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+.chat-toolbar{
+    background:var(--bg2);border-bottom:1px solid var(--border);
+    padding:6px 12px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;
+}
+.conv-title-edit{
+    font-size:13px;font-weight:600;background:transparent;
+    border:1px solid transparent;color:var(--text);border-radius:4px;
+    padding:2px 6px;cursor:pointer;
+}
+.conv-title-edit:hover{border-color:var(--border);}
+.conv-title-edit:focus{border-color:var(--accent);outline:none;background:var(--bg3);}
+.context-info{font-size:11px;color:var(--text2);margin-left:auto;display:flex;align-items:center;gap:6px;}
+.context-bar{width:80px;height:5px;background:var(--bg3);border-radius:3px;overflow:hidden;}
+.context-fill{height:100%;background:var(--green);transition:width 0.3s,background 0.3s;}
+.messages{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;}
+.message{display:flex;gap:8px;max-width:100%;}
+.message.user{flex-direction:row-reverse;}
+.avatar{
+    width:30px;height:30px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-size:13px;flex-shrink:0;
+}
+.message.user .avatar{background:var(--accent);color:#000;}
+.message.ai   .avatar{background:var(--purple);color:#000;}
+.message.system-msg .avatar{background:var(--yellow);color:#000;}
+.message.memory-msg .avatar{background:var(--orange);color:#000;}
+.bubble{
+    background:var(--bg2);border:1px solid var(--border);
+    border-radius:10px;padding:9px 13px;max-width:82%;
+    font-size:13px;line-height:1.6;word-break:break-word;
+}
+.message.user .bubble{background:var(--bg3);border-color:var(--accent);}
+.message.memory-msg .bubble{background:var(--bg3);border-color:var(--orange);font-size:12px;}
+.bubble pre{
+    background:var(--bg);border:1px solid var(--border);
+    border-radius:6px;padding:10px;overflow-x:auto;margin:7px 0;position:relative;
+}
+.bubble code{font-family:'Consolas','Monaco',monospace;font-size:12px;}
+.copy-code-btn{
+    position:absolute;top:5px;right:5px;padding:2px 7px;font-size:11px;
+    background:var(--bg3);border:1px solid var(--border);
+    color:var(--text);border-radius:4px;cursor:pointer;
+}
+.copy-code-btn:hover{background:var(--accent);color:#000;}
+.msg-time{font-size:10px;color:var(--text2);margin-top:4px;text-align:right;}
+
+/* ============================================================
+   MÓDULO: INPUT AREA
+   ============================================================ */
+.input-area{background:var(--bg2);border-top:1px solid var(--border);padding:10px 12px;}
+.input-options{display:flex;gap:10px;margin-bottom:7px;flex-wrap:wrap;align-items:center;}
+.input-options label{font-size:12px;color:var(--text2);display:flex;align-items:center;gap:4px;cursor:pointer;}
+.input-row{display:flex;gap:7px;align-items:flex-end;}
+.input-box{
+    flex:1;background:var(--bg3);border:1px solid var(--border);
+    color:var(--text);padding:9px 11px;border-radius:8px;font-size:13px;
+    resize:none;outline:none;min-height:42px;max-height:180px;
+    font-family:inherit;line-height:1.5;
+}
+.input-box:focus{border-color:var(--accent);}
+
+/* ============================================================
+   MÓDULO: PAINEL DE CÓDIGO
+   ============================================================ */
+.code-panel{
+    width:400px;background:var(--bg2);border-left:1px solid var(--border);
+    display:flex;flex-direction:column;overflow:hidden;transition:width 0.2s;
+}
+.code-panel.collapsed{width:0;overflow:hidden;}
+.code-panel-header{
+    padding:8px 10px;border-bottom:1px solid var(--border);
+    display:flex;gap:6px;align-items:center;flex-wrap:wrap;
+}
+.code-panel-header h3{font-size:12px;color:var(--text2);}
+.code-tabs{
+    display:flex;border-bottom:1px solid var(--border);
+    background:var(--bg);overflow-x:auto;min-height:32px;
+}
+.code-tab{
+    padding:6px 12px;font-size:11px;cursor:pointer;
+    border-right:1px solid var(--border);white-space:nowrap;
+    display:flex;align-items:center;gap:5px;color:var(--text2);
+}
+.code-tab:hover{background:var(--bg3);color:var(--text);}
+.code-tab.active{background:var(--bg2);color:var(--accent);border-bottom:2px solid var(--accent);}
+.code-tab-close{opacity:0;color:var(--red);font-size:13px;}
+.code-tab:hover .code-tab-close{opacity:1;}
+.code-editor-wrap{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+.code-editor{
+    flex:1;background:var(--bg);color:var(--text);border:none;
+    padding:10px;font-family:'Consolas','Monaco',monospace;font-size:12px;
+    resize:none;outline:none;line-height:1.6;tab-size:2;
+}
+.code-actions{
+    padding:7px 10px;border-top:1px solid var(--border);
+    display:flex;gap:6px;flex-wrap:wrap;align-items:center;
+}
+
+/* ============================================================
+   MÓDULO: PAINEL CÉREBRO (memória)
+   ============================================================ */
+.brain-panel{
+    width:0;background:var(--bg2);border-left:1px solid var(--border);
+    display:flex;flex-direction:column;overflow:hidden;transition:width 0.25s;
+}
+.brain-panel.open{width:300px;}
+.brain-header{
+    padding:8px 12px;border-bottom:1px solid var(--border);
+    display:flex;justify-content:space-between;align-items:center;
+}
+.brain-header h3{font-size:13px;color:var(--orange);}
+.brain-content{flex:1;overflow-y:auto;padding:10px;}
+.memory-item{
+    background:var(--bg3);border:1px solid var(--border);
+    border-radius:8px;padding:9px 11px;margin-bottom:8px;
+    font-size:12px;line-height:1.5;position:relative;
+}
+.memory-item:hover{border-color:var(--orange);}
+.memory-item .mem-time{font-size:10px;color:var(--text2);margin-top:4px;}
+.memory-item .mem-del{
+    position:absolute;top:6px;right:8px;
+    color:var(--red);cursor:pointer;font-size:13px;opacity:0;
+}
+.memory-item:hover .mem-del{opacity:1;}
+.memory-tag{
+    display:inline-block;padding:1px 7px;border-radius:10px;
+    font-size:10px;margin-right:4px;margin-bottom:3px;
+    background:var(--bg);border:1px solid var(--border);color:var(--text2);
+}
+.memory-tag.code{border-color:var(--accent);color:var(--accent);}
+.memory-tag.context{border-color:var(--orange);color:var(--orange);}
+.memory-tag.important{border-color:var(--red);color:var(--red);}
+.brain-actions{padding:8px 10px;border-top:1px solid var(--border);display:flex;gap:6px;flex-wrap:wrap;}
+
+/* ============================================================
+   MÓDULO: MODAIS
+   ============================================================ */
+.modal-overlay{
+    display:none;position:fixed;inset:0;
+    background:rgba(0,0,0,0.75);z-index:1000;
+    align-items:center;justify-content:center;
+}
+.modal-overlay.open{display:flex;}
+.modal{
+    background:var(--bg2);border:1px solid var(--border);
+    border-radius:12px;padding:22px;width:520px;
+    max-width:95vw;max-height:90vh;overflow-y:auto;
+}
+.modal h2{font-size:16px;margin-bottom:18px;color:var(--accent);}
+.form-group{margin-bottom:14px;}
+.form-group label{display:block;font-size:12px;color:var(--text2);margin-bottom:5px;}
+.form-group input,.form-group select,.form-group textarea{width:100%;padding:7px 10px;}
+.form-group textarea{
+    background:var(--bg3);border:1px solid var(--border);color:var(--text);
+    border-radius:6px;font-size:12px;outline:none;resize:vertical;
+    min-height:70px;font-family:inherit;
+}
+.range-row{display:flex;align-items:center;gap:8px;}
+.range-row input[type="range"]{flex:1;accent-color:var(--accent);}
+.range-val{min-width:45px;text-align:right;font-size:12px;color:var(--accent);}
+.api-row{display:flex;gap:6px;}
+.api-row input{flex:1;}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;}
+.section-title{
+    font-size:11px;color:var(--text2);text-transform:uppercase;
+    letter-spacing:1px;margin:14px 0 8px;padding-bottom:4px;
+    border-bottom:1px solid var(--border);
+}
+
+/* ============================================================
+   MÓDULO: NOVO CHAT MODAL (confirmação)
+   ============================================================ */
+.new-chat-modal .modal{width:420px;}
+
+/* ============================================================
+   MÓDULO: TOAST
+   ============================================================ */
+.toast{
+    position:fixed;bottom:18px;right:18px;
+    background:var(--bg3);border:1px solid var(--border);
+    color:var(--text);padding:9px 15px;border-radius:8px;
+    font-size:12px;z-index:9999;opacity:0;
+    transform:translateY(8px);transition:all 0.25s;pointer-events:none;
+}
+.toast.show{opacity:1;transform:translateY(0);}
+.toast.success{border-color:var(--green);color:var(--green);}
+.toast.error{border-color:var(--red);color:var(--red);}
+.toast.warn{border-color:var(--yellow);color:var(--yellow);}
+
+/* ============================================================
+   MÓDULO: LOADING / TYPING
+   ============================================================ */
+.typing{display:flex;gap:4px;padding:3px 0;}
+.typing span{
+    width:7px;height:7px;background:var(--text2);
+    border-radius:50%;animation:bounce 1.2s infinite;
+}
+.typing span:nth-child(2){animation-delay:.2s;}
+.typing span:nth-child(3){animation-delay:.4s;}
+@keyframes bounce{
+    0%,80%,100%{transform:translateY(0);opacity:.4;}
+    40%{transform:translateY(-5px);opacity:1;}
+}
+
+/* ============================================================
+   MÓDULO: SCROLLBAR
+   ============================================================ */
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+::-webkit-scrollbar-thumb:hover{background:var(--text2);}
+
+.hidden{display:none!important;}
+.divider{height:1px;background:var(--border);margin:10px 0;}
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     MÓDULO: HEADER
+     ============================================================ -->
+<div class="header" style="font-weight: bold; display: grid;">
+    <h1>🤖 AI Code Studio</h1>
+    <div class="header-controls" style="border-color: rgb(255, 255, 0); font-weight: normal;">
+        <select id="aiProvider" onchange="MODULE_Provider.onChange()" class="">
+            <option value="openai">OpenAI (GPT)</option>
+            <option value="anthropic">Anthropic (Claude)</option>
+            <option value="gemini">Google (Gemini)</option>
+            <option value="groq">Groq (Llama)</option>
+            <option value="openrouter">OpenRouter (Multi)</option>
+            <option value="ollama">Ollama (Local)</option>
+        </select>
+        <select id="modelSelect" style="min-width:150px"><option value="openai/gpt-4o">openai/gpt-4o</option><option value="anthropic/claude-3.5-sonnet">anthropic/claude-3.5-sonnet</option><option value="google/gemini-pro-1.5">google/gemini-pro-1.5</option><option value="meta-llama/llama-3.1-70b-instruct">meta-llama/llama-3.1-70b-instruct</option><option value="mistralai/mixtral-8x7b-instruct">mistralai/mixtral-8x7b-instruct</option><option value="deepseek/deepseek-coder">deepseek/deepseek-coder</option><option value="qwen/qwen-2.5-coder-32b-instruct">qwen/qwen-2.5-coder-32b-instruct</option></select>
+        <button class="btn" onclick="MODULE_Settings.open()">⚙️ Config</button>
+        <button class="btn warn" onclick="MODULE_Brain.toggle()">🧠 Cérebro</button>
+        <button class="btn primary" onclick="MODULE_Chat.confirmNewChat()">＋ Novo Chat</button>
+        <button class="btn" onclick="MODULE_Code.togglePanel()">💻 Código</button>
+        <button class="btn" onclick="MODULE_Storage.exportAll()">💾 Exportar</button>
+        <button class="btn" onclick="MODULE_Storage.importBackup()">📂 Importar</button>
+    </div>
+</div>
+
+<!-- ============================================================
+     MÓDULO: MAIN LAYOUT
+     ============================================================ -->
+<div class="main">
+
+    <!-- SIDEBAR -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-header" style="font-weight: normal;">
+            Conversas
+            <button class="btn" style="padding:1px 7px;font-size:11px" onclick="MODULE_Chat.confirmNewChat()">+</button>
+        </div>
+        <div class="conversations" id="convList"><div class="conv-item">
+                <div style="flex:1;overflow:hidden">
+                    <div class="conv-title">Nova Conversa</div>
+                    <div class="conv-meta">0 msgs</div>
+                </div>
+                <span class="conv-delete" onclick="MODULE_Chat.deleteConv('conv_1788073710810',event)">✕</span>
+            </div><div class="conv-item active">
+                <div style="flex:1;overflow:hidden">
+                    <div class="conv-title">Oi</div>
+                    <div class="conv-meta">8 msgs</div>
+                </div>
+                <span class="conv-delete" onclick="MODULE_Chat.deleteConv('conv_1787968262740',event)">✕</span>
+            </div><div class="conv-item">
+                <div style="flex:1;overflow:hidden">
+                    <div class="conv-title">Oi</div>
+                    <div class="conv-meta">6 msgs</div>
+                </div>
+                <span class="conv-delete" onclick="MODULE_Chat.deleteConv('conv_1787935185235',event)">✕</span>
+            </div><div class="conv-item">
+                <div style="flex:1;overflow:hidden">
+                    <div class="conv-title">Nova Conversa</div>
+                    <div class="conv-meta">0 msgs</div>
+                </div>
+                <span class="conv-delete" onclick="MODULE_Chat.deleteConv('conv_1787935184588',event)">✕</span>
+            </div><div class="conv-item">
+                <div style="flex:1;overflow:hidden">
+                    <div class="conv-title">Nova Conversa</div>
+                    <div class="conv-meta">0 msgs</div>
+                </div>
+                <span class="conv-delete" onclick="MODULE_Chat.deleteConv('conv_1787935096025',event)">✕</span>
+            </div><div class="conv-item">
+                <div style="flex:1;overflow:hidden">
+                    <div class="conv-title">Nova Conversa</div>
+                    <div class="conv-meta">0 msgs</div>
+                </div>
+                <span class="conv-delete" onclick="MODULE_Chat.deleteConv('conv_1787913313757',event)">✕</span>
+            </div><div class="conv-item">
+                <div style="flex:1;overflow:hidden">
+                    <div class="conv-title">Nova Conversa</div>
+                    <div class="conv-meta">0 msgs</div>
+                </div>
+                <span class="conv-delete" onclick="MODULE_Chat.deleteConv('conv_1787913275481',event)">✕</span>
+            </div><div class="conv-item">
+                <div style="flex:1;overflow:hidden">
+                    <div class="conv-title">Nova Conversa</div>
+                    <div class="conv-meta">0 msgs</div>
+                </div>
+                <span class="conv-delete" onclick="MODULE_Chat.deleteConv('conv_1787906652146',event)">✕</span>
+            </div></div>
+    </div>
+
+    <!-- CHAT -->
+    <div class="chat-area">
+        <div class="chat-toolbar">
+            <input class="conv-title-edit" id="convTitleEdit" value="Nova Conversa" onblur="MODULE_Chat.renameConv(this.value)" onkeydown="if(event.key==='Enter')this.blur()">
+            <div class="context-info">
+                <span id="tokenCount">377</span>tk
+                <div class="context-bar">
+                    <div class="context-fill" id="contextFill" style="width: 18.85%; background: var(--green);"></div>
+                </div>
+                <button class="btn" style="padding:2px 7px;font-size:11px" onclick="MODULE_Context.clear()" title="Limpar contexto">✂️</button>
+                <button class="btn" style="padding:2px 7px;font-size:11px" onclick="MODULE_Context.summarize()" title="Resumir contexto">📋</button>
+            </div>
+        </div>
+
+        <div class="messages" id="messages"><div class="message user">
+            <div class="avatar">👤</div>
+            <div class="bubble">
+                Oi
+                <div class="msg-time">22:51:14</div>
+            </div>
+        </div><div class="message ai">
+            <div class="avatar">🤖</div>
+            <div class="bubble">
+                Olá! Como posso ajudar você com programação hoje? Você tem um projeto específico em mente ou precisa de ajuda com algum problema?
+                <div class="msg-time">22:51:16</div>
+            </div>
+        </div><div class="message user">
+            <div class="avatar">👤</div>
+            <div class="bubble">
+                Tudo bem
+                <div class="msg-time">22:52:15</div>
+            </div>
+        </div><div class="message ai">
+            <div class="avatar">🤖</div>
+            <div class="bubble">
+                Então, o que você gostaria de fazer? Quer conversar sobre um assunto específico, como programação em Python ou Java, ou talvez criar um projeto de programação do zero? Estou aqui para ajudar!
+                <div class="msg-time">22:52:18</div>
+            </div>
+        </div><div class="message user">
+            <div class="avatar">👤</div>
+            <div class="bubble">
+                Você que consegue escrever algum código é só de teste
+                <div class="msg-time">22:53:18</div>
+            </div>
+        </div><div class="message ai">
+            <div class="avatar">🤖</div>
+            <div class="bubble">
+                Vou criar um exemplo simples em Python. Aqui vai um código que imprime a tabuada de um número escolhido pelo usuário:<br><br><pre><button class="copy-code-btn" onclick="copyCodeBlock(this)">📋 Copiar</button><code class="lang-code"># Solicita o número do usuário<br>numero = int(input("Digite um número: "))<br><br># Imprime a tabuada do número<br>print("Tabuada do", numero)<br>for i in range(1, 11):<br>    print(f"{numero} x {i} = {numero * i}")</code></pre><br><br>Este código faz o seguint
+                <div class="msg-time">22:53:27</div>
+            </div>
+        </div><div class="message user">
+            <div class="avatar">👤</div>
+            <div class="bubble">
+                Sobre um corte HTML você sabe como faz para poder configurar o ambiente para poder ficar mais responsável mais fácil de visualizar tipo esse Verde aqui por exemplo<br><br><strong>Código no editor:</strong><br><pre><button class="copy-code-btn" onclick="copyCodeBlock(this)">📋 Copiar</button><code class="lang-html"># Solicita o número do usuário<br>numero = int(input("Digite um número: "))<br><br># Imprime a tabuada do número<br>print("Tabuada do", numero)<br>for i in range(1, 11):<br>    print(f"{numero} x {i} = {numero * i}")</code></pre>
+                <div class="msg-time">22:55:32</div>
+            </div>
+        </div><div class="message ai">
+            <div class="avatar">🤖</div>
+            <div class="bubble">
+                Entendi melhor agora!<br><br>Sim, posso ajudar com isso!<br><br>Para configurar o ambiente de código HTML para que fique mais responsivo e fácil de visualizar, você pode usar CSS (Cascading Style Sheets). Aqui vai um exemplo de como você pode fazer isso:<br><br><strong>HTML:</strong><br>```html<br><br><br><br>  <title>Tabuada</title><br>  <link rel="stylesheet" href="style.css"><br><br><br> 
+                <div class="msg-time">22:55:34</div>
+            </div>
+        </div></div>
+
+        <div class="input-area">
+            <div class="input-options">
+                <label>
+                    <input type="checkbox" id="webSearchCheck">
+                    🌐 Web
+                </label>
+                <label>
+                    <input type="checkbox" id="codeMode" checked="">
+                    💻 Código
+                </label>
+                <label>
+                    🌡️
+                    <input type="range" min="0" max="2" step="0.1" value="0.7" id="tempSlider" style="width:70px;accent-color:var(--accent);vertical-align:middle" oninput="document.getElementById('tempVal').textContent=this.value">
+                    <span id="tempVal">1.4</span>
+                </label>
+                <label>
+                    📏
+                    <input type="number" id="maxTokens" value="4096" min="256" max="32000" style="width:75px">
+                </label>
+            </div>
+            <div class="input-row">
+                <textarea class="input-box" id="userInput" placeholder="Mensagem... (Ctrl+Enter envia)" onkeydown="MODULE_UI.handleKey(event)" oninput="MODULE_UI.autoResize(this)"></textarea>
+                <button class="btn" onclick="MODULE_Code.pasteToEditor()" title="Colar código">📋</button>
+                <button class="btn primary" onclick="MODULE_Chat.send()" id="sendBtn">Enviar ▶</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PAINEL CÓDIGO -->
+    <div class="code-panel collapsed" id="codePanel">
+        <div class="code-panel-header">
+            <h3>💻 Editor</h3>
+            <button class="btn" onclick="MODULE_Code.newTab()">+ Tab</button>
+            <button class="btn" onclick="MODULE_Code.importFile()">📂</button>
+            <button class="btn" onclick="MODULE_Code.togglePanel()" style="margin-left:auto">✕</button>
+        </div>
+        <div class="code-tabs" id="codeTabs"><div class="code-tab">
+                <span onclick="MODULE_Code.switchTab(0)">código_1</span>
+                <span class="code-tab-close" onclick="MODULE_Code.closeTab(0,event)">✕</span>
+            </div><div class="code-tab">
+                <span onclick="MODULE_Code.switchTab(1)">código_2</span>
+                <span class="code-tab-close" onclick="MODULE_Code.closeTab(1,event)">✕</span>
+            </div><div class="code-tab active">
+                <span onclick="MODULE_Code.switchTab(2)">código_3</span>
+                <span class="code-tab-close" onclick="MODULE_Code.closeTab(2,event)">✕</span>
+            </div></div>
+        <div class="code-editor-wrap">
+            <textarea class="code-editor" id="codeEditor" spellcheck="false" placeholder="// Cole ou escreva código aqui..."></textarea>
+        </div>
+        <div class="code-actions">
+            <button class="btn success" onclick="MODULE_Code.copyClean()">📋 Copiar</button>
+            <button class="btn" onclick="MODULE_Code.sendToChat()">💬 Chat</button>
+            <button class="btn" onclick="MODULE_Code.download()">⬇️</button>
+            <button class="btn danger" onclick="MODULE_Code.clear()">🗑️</button>
+            <select id="codeLang" style="font-size:11px;margin-left:auto">
+                <option value="javascript">JS</option>
+                <option value="python">Python</option>
+                <option value="html">HTML</option>
+                <option value="css">CSS</option>
+                <option value="typescript">TS</option>
+                <option value="java">Java</option>
+                <option value="csharp">C#</option>
+                <option value="cpp">C++</option>
+                <option value="php">PHP</option>
+                <option value="sql">SQL</option>
+                <option value="rust">Rust</option>
+                <option value="go">Go</option>
+                <option value="bash">Bash</option>
+                <option value="text">Texto</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- PAINEL CÉREBRO -->
+    <div class="brain-panel" id="brainPanel">
+        <div class="brain-header">
+            <h3>🧠 Cérebro / Memória</h3>
+            <button class="btn" style="padding:2px 7px;font-size:11px" onclick="MODULE_Brain.toggle()">✕</button>
+        </div>
+        <div class="brain-content" id="brainContent">
+            <div class="memory-item">
+                <span class="mem-del" onclick="MODULE_Brain.deleteMemory('mem_1788073710809_tx2r')">✕</span>
+                <div>
+                    <span class="memory-tag context">context</span>
+                    <span class="memory-tag">auto</span><span class="memory-tag">conversa</span>
+                </div>
+                <div style="margin-top:5px">Conversa: "Oi"
+Tópicos: Tudo bem | Você que consegue escrever algum código é só de teste | Sobre um corte HTML você sabe como faz para poder configurar o ambiente para poder ficar mais respon</div>
+                <div class="mem-time">30/08/2026, 04:08:30</div>
+            </div>
+        </div>
+        <div class="brain-actions">
+            <button class="btn warn" onclick="MODULE_Brain.addManual()">+ Memória</button>
+            <button class="btn" onclick="MODULE_Brain.exportMemory()">💾 Backup</button>
+            <button class="btn" onclick="MODULE_Brain.importMemory()">📂 Restaurar</button>
+            <button class="btn danger" onclick="MODULE_Brain.clearAll()">🗑️ Limpar</button>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================
+     MODAL: CONFIGURAÇÕES
+     ============================================================ -->
+<div class="modal-overlay" id="settingsModal">
+    <div class="modal">
+        <h2>⚙️ Configurações</h2>
+
+        <div class="section-title">🔑 API Keys</div>
+        <div class="form-group">
+            <label>OpenAI / Groq / OpenRouter Key</label>
+            <div class="api-row">
+                <input type="password" id="apiKeyInput" placeholder="sk-...">
+                <button class="btn" onclick="MODULE_UI.togglePass('apiKeyInput')">👁️</button>
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Anthropic (Claude) Key</label>
+            <div class="api-row">
+                <input type="password" id="anthropicKeyInput" placeholder="sk-ant-...">
+                <button class="btn" onclick="MODULE_UI.togglePass('anthropicKeyInput')">👁️</button>
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Google Gemini Key</label>
+            <div class="api-row">
+                <input type="password" id="geminiKeyInput" placeholder="AIza...">
+                <button class="btn" onclick="MODULE_UI.togglePass('geminiKeyInput')">👁️</button>
+            </div>
+        </div>
+        <div class="form-group">
+            <label>🌐 Serper Key (Web Search)</label>
+            <div class="api-row">
+                <input type="password" id="serperKeyInput" placeholder="Serper.dev key">
+                <button class="btn" onclick="MODULE_UI.togglePass('serperKeyInput')">👁️</button>
+            </div>
+        </div>
+
+        <div class="section-title">🏠 Local / Ollama</div>
+        <div class="form-group">
+            <label>Ollama URL</label>
+            <input type="text" id="ollamaUrl" value="http://localhost:11434">
+        </div>
+
+        <div class="section-title">📏 Contexto</div>
+        <div class="form-group">
+            <label>Limite de tokens estimados</label>
+            <div class="range-row">
+                <input type="range" min="1000" max="200000" step="1000" value="8000" id="contextLimit" oninput="document.getElementById('ctxVal').textContent=this.value">
+                <span class="range-val" id="ctxVal">8000</span>
+            </div>
+        </div>
+        <div class="form-group">
+            <label>Estratégia ao atingir limite</label>
+            <select id="contextStrategy">
+                <option value="trim">Remover mensagens antigas</option>
+                <option value="summarize">Resumir automaticamente</option>
+                <option value="warn">Apenas avisar</option>
+            </select>
+        </div>
+
+        <div class="section-title">🧠 Cérebro / Memória</div>
+        <div class="form-group">
+            <label>Memórias recentes injetadas no contexto (0 = desligado)</label>
+            <input type="number" id="memoryInjectCount" value="5" min="0" max="20">
+        </div>
+        <div class="form-group">
+            <label>Auto-salvar memória ao finalizar chat</label>
+            <select id="autoMemory">
+                <option value="1">Sim</option>
+                <option value="0">Não</option>
+            </select>
+        </div>
+
+        <div class="section-title">🤖 Comportamento</div>
+        <div class="form-group">
+            <label>System Prompt</label>
+            <textarea id="systemPrompt">Você é um assistente especialista em programação. Ao gerar código:
+1. Use blocos de código com linguagem especificada
+2. Código limpo, sem caracteres estranhos
+3. Comente em português
+4. Divida códigos grandes em partes lógicas</textarea>
+        </div>
+        <div class="form-group">
+            <label>Auto-save (segundos, 0 = off)</label>
+            <input type="number" id="autoSaveInterval" value="30" min="0" max="300">
+        </div>
+
+        <div class="modal-footer">
+            <button class="btn" onclick="MODULE_Settings.close()">Cancelar</button>
+            <button class="btn primary" onclick="MODULE_Settings.save()">💾 Salvar</button>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================
+     MODAL: NOVO CHAT (confirmação segura)
+     ============================================================ -->
+<div class="modal-overlay new-chat-modal" id="newChatModal">
+    <div class="modal">
+        <h2>＋ Novo Chat</h2>
+        <p style="font-size:13px;color:var(--text2);margin-bottom:16px">
+            O que fazer com a conversa atual antes de iniciar um novo chat?
+        </p>
+        <div style="display:flex;flex-direction:column;gap:10px">
+            <button class="btn success" onclick="MODULE_Chat.newChatAction('save')">
+                💾 Salvar conversa atual e iniciar novo chat
+            </button>
+            <button class="btn warn" onclick="MODULE_Chat.newChatAction('memory')">
+                🧠 Salvar como memória e iniciar novo chat
+            </button>
+            <button class="btn primary" onclick="MODULE_Chat.newChatAction('both')">
+                ✅ Salvar conversa + criar memória e iniciar novo chat
+            </button>
+            <button class="btn danger" onclick="MODULE_Chat.newChatAction('discard')">
+                🗑️ Descartar e iniciar novo chat
+            </button>
+            <button class="btn" onclick="MODULE_Chat.closeNewChatModal()">
+                ✕ Cancelar
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================
+     MODAL: MEMÓRIA MANUAL
+     ============================================================ -->
+<div class="modal-overlay" id="memoryModal">
+    <div class="modal">
+        <h2>🧠 Adicionar Memória</h2>
+        <div class="form-group">
+            <label>Conteúdo da memória</label>
+            <textarea id="memoryContent" style="min-height:100px" placeholder="Ex: O projeto usa React + Node.js. API rodando na porta 3001..."></textarea>
+        </div>
+        <div class="form-group">
+            <label>Tipo</label>
+            <select id="memoryType">
+                <option value="context">Contexto geral</option>
+                <option value="code">Código / técnico</option>
+                <option value="important">Importante</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Tags (separadas por vírgula)</label>
+            <input type="text" id="memoryTags" placeholder="projeto, react, api">
+        </div>
+        <div class="modal-footer">
+            <button class="btn" onclick="MODULE_Brain.closeMemoryModal()">Cancelar</button>
+            <button class="btn primary" onclick="MODULE_Brain.saveManual()">💾 Salvar</button>
+        </div>
+    </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast">💾 Auto-saved</div>
+
+<!-- File inputs ocultos -->
+<input type="file" id="fileImportCode" style="display:none" accept=".js,.py,.html,.css,.ts,.java,.cs,.cpp,.php,.sql,.txt,.json,.md,.rs,.go,.sh" onchange="MODULE_Code.handleFileImport(event)">
+<input type="file" id="fileImportBackup" style="display:none" accept=".json" onchange="MODULE_Storage.handleImport(event)">
+<input type="file" id="fileImportMemory" style="display:none" accept=".json" onchange="MODULE_Brain.handleImport(event)">
+
+<!-- ============================================================
+     JAVASCRIPT — ARQUITETURA MODULAR
+     ============================================================ -->
+<script>
+'use strict';
+
+/* ============================================================
+   MÓDULO: ESTADO GLOBAL (STATE)
+   Único ponto de verdade. Nunca acesse localStorage diretamente
+   fora do MODULE_Storage.
+   ============================================================ */
+const STATE = {
+    conversations: {},
+    activeConvId: null,
+    codeTabs: [],
+    activeCodeTab: 0,
+    memories: [],          // 🧠 CÉREBRO
+    settings: {
+        apiKey: '',
+        anthropicKey: '',
+        geminiKey: '',
+        serperKey: '',
+        ollamaUrl: 'http://localhost:11434',
+        contextLimit: 8000,
+        contextStrategy: 'trim',
+        systemPrompt: '',
+        autoSaveInterval: 30,
+        provider: 'openai',
+        model: '',
+        temperature: 0.7,
+        maxTokens: 4096,
+        memoryInjectCount: 5,
+        autoMemory: '1'
+    },
+    isLoading: false,
+    _autoSaveTimer: null,
+    _version: '1.0.0'      // para migrações futuras
+};
+
+/* ============================================================
+   MÓDULO: MODELOS DISPONÍVEIS
+   ============================================================ */
+const MODULE_Provider = (() => {
+    const MODELS = {
+        openai:      ['gpt-4o','gpt-4o-mini','gpt-4-turbo','gpt-4','gpt-3.5-turbo','gpt-3.5-turbo-16k'],
+        anthropic:   ['claude-opus-4-5','claude-sonnet-4-5','claude-haiku-4-5',
+                      'claude-3-5-sonnet-20241022','claude-3-5-haiku-20241022',
+                      'claude-3-opus-20240229','claude-3-haiku-20240307'],
+        gemini:      ['gemini-1.5-pro','gemini-1.5-flash','gemini-1.5-flash-8b','gemini-pro'],
+        groq:        ['llama-3.3-70b-versatile','llama-3.1-70b-versatile',
+                      'llama-3.1-8b-instant','mixtral-8x7b-32768','gemma2-9b-it'],
+        openrouter:  ['openai/gpt-4o','anthropic/claude-3.5-sonnet',
+                      'google/gemini-pro-1.5','meta-llama/llama-3.1-70b-instruct',
+                      'mistralai/mixtral-8x7b-instruct','deepseek/deepseek-coder',
+                      'qwen/qwen-2.5-coder-32b-instruct'],
+        ollama:      ['llama3.2','codellama','mistral','phi3','qwen2.5-coder','deepseek-coder-v2']
+    };
+
+    function onChange() {
+        updateSelect();
+    }
+
+    function updateSelect() {
+        const provider = document.getElementById('aiProvider').value;
+        const sel = document.getElementById('modelSelect');
+        const models = MODELS[provider] || [];
+        sel.innerHTML = models.map(m => `<option value="${m}">${m}</option>`).join('');
+        if (STATE.settings.provider === provider && STATE.settings.model) {
+            if (models.includes(STATE.settings.model)) sel.value = STATE.settings.model;
+        }
+    }
+
+    function current() {
+        return {
+            provider: document.getElementById('aiProvider').value,
+            model:    document.getElementById('modelSelect').value
+        };
+    }
+
+    return { onChange, updateSelect, current, MODELS };
+})();
+
+/* ============================================================
+   MÓDULO: STORAGE (localStorage)
+   ============================================================ */
+const MODULE_Storage = (() => {
+    const KEY = 'aiStudio_v1';
+
+    function save() {
+        try {
+            localStorage.setItem(KEY, JSON.stringify({
+                conversations: STATE.conversations,
+                activeConvId:  STATE.activeConvId,
+                codeTabs:      STATE.codeTabs,
+                activeCodeTab: STATE.activeCodeTab,
+                memories:      STATE.memories,
+                settings:      STATE.settings,
+                _version:      STATE._version
+            }));
+        } catch(e) {
+            MODULE_UI.toast('⚠️ Erro ao salvar (storage cheio?)', 'error');
+        }
+    }
+
+    function load() {
+        try {
+            const raw = localStorage.getItem(KEY);
+            if (!raw) return;
+            const d = JSON.parse(raw);
+            STATE.conversations = d.conversations || {};
+            STATE.activeConvId  = d.activeConvId  || null;
+            STATE.codeTabs      = d.codeTabs       || [];
+            STATE.activeCodeTab = d.activeCodeTab  || 0;
+            STATE.memories      = d.memories       || [];
+            if (d.settings) STATE.settings = { ...STATE.settings, ...d.settings };
+        } catch(e) {
+            console.error('Erro ao carregar storage:', e);
+        }
+    }
+
+    function setupAutoSave() {
+        if (STATE._autoSaveTimer) clearInterval(STATE._autoSaveTimer);
+        const sec = parseInt(STATE.settings.autoSaveInterval) || 0;
+        if (sec > 0) {
+            STATE._autoSaveTimer = setInterval(() => {
+                save();
+                MODULE_UI.toast('💾 Auto-saved', 'success');
+            }, sec * 1000);
+        }
+    }
+
+    function exportAll() {
+        const data = {
+            exportedAt:    new Date().toISOString(),
+            conversations: STATE.conversations,
+            codeTabs:      STATE.codeTabs,
+            memories:      STATE.memories,
+            settings:      { ...STATE.settings, apiKey:'***', anthropicKey:'***', geminiKey:'***', serperKey:'***' },
+            _version:      STATE._version
+        };
+        _download(JSON.stringify(data, null, 2), `ai-studio-backup-${Date.now()}.json`, 'application/json');
+        MODULE_UI.toast('💾 Backup exportado!', 'success');
+    }
+
+    function importBackup() {
+        document.getElementById('fileImportBackup').click();
+    }
+
+    function handleImport(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = ev => {
+            try {
+                const d = JSON.parse(ev.target.result);
+                if (d.conversations) STATE.conversations = { ...STATE.conversations, ...d.conversations };
+                if (d.memories)      STATE.memories      = [...STATE.memories, ...d.memories];
+                if (d.codeTabs)      STATE.codeTabs      = [...STATE.codeTabs, ...d.codeTabs];
+                save();
+                MODULE_Chat.renderConversations();
+                MODULE_Brain.render();
+                MODULE_Code.renderTabs();
+                MODULE_UI.toast('✅ Backup importado!', 'success');
+            } catch(err) {
+                MODULE_UI.toast('❌ Arquivo inválido', 'error');
+            }
+        };
+        reader.readAsText(file);
+        e.target.value = '';
+    }
+
+    function _download(content, filename, type) {
+        const blob = new Blob([content], { type });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = filename;
+        a.click();
+    }
+
+    return { save, load, setupAutoSave, exportAll, importBackup, handleImport, _download };
+})();
+
+/* ============================================================
+   MÓDULO: CÉREBRO / MEMÓRIA 🧠
+   ============================================================ */
+const MODULE_Brain = (() => {
+
+    function toggle() {
+        const panel = document.getElementById('brainPanel');
+        panel.classList.toggle('open');
+        if (panel.classList.contains('open')) render();
+    }
+
+    function render() {
+        const container = document.getElementById('brainContent');
+        if (!STATE.memories.length) {
+            container.innerHTML = '<p style="font-size:12px;color:var(--text2);text-align:center;padding:20px">Nenhuma memória salva.<br>As memórias ajudam a IA a lembrar<br>de contextos entre conversas.</p>';
+            return;
+        }
+
+        // Mostra as mais recentes primeiro
+        const sorted = [...STATE.memories].sort((a, b) => b.createdAt - a.createdAt);
+        container.innerHTML = sorted.map((m, i) => `
+            <div class="memory-item">
+                <span class="mem-del" onclick="MODULE_Brain.deleteMemory('${m.id}')">✕</span>
+                <div>
+                    <span class="memory-tag ${m.type}">${m.type}</span>
+                    ${(m.tags||[]).map(t => `<span class="memory-tag">${t}</span>`).join('')}
+                </div>
+                <div style="margin-top:5px">${escapeHtml(m.content.substring(0, 200))}${m.content.length > 200 ? '...' : ''}</div>
+                <div class="mem-time">${new Date(m.createdAt).toLocaleString('pt-BR')}</div>
+            </div>
+        `).join('');
+    }
+
+    function addManual() {
+        document.getElementById('memoryContent').value = '';
+        document.getElementById('memoryTags').value = '';
+        document.getElementById('memoryType').value = 'context';
+        document.getElementById('memoryModal').classList.add('open');
+    }
+
+    function closeMemoryModal() {
+        document.getElementById('memoryModal').classList.remove('open');
+    }
+
+    function saveManual() {
+        const content = document.getElementById('memoryContent').value.trim();
+        if (!content) { MODULE_UI.toast('Conteúdo vazio!', 'error'); return; }
+        const tags = document.getElementById('memoryTags').value
+            .split(',').map(t => t.trim()).filter(Boolean);
+        const type = document.getElementById('memoryType').value;
+        addMemory(content, type, tags);
+        closeMemoryModal();
+        render();
+        MODULE_UI.toast('🧠 Memória salva!', 'success');
+    }
+
+    function addMemory(content, type = 'context', tags = [], source = 'manual') {
+        const mem = {
+            id:        'mem_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
+            content,
+            type,
+            tags,
+            source,    // 'manual' | 'auto' | 'chat'
+            createdAt: Date.now()
+        };
+        STATE.memories.unshift(mem);
+        // Limita a 200 memórias para não explodir o storage
+        if (STATE.memories.length > 200) STATE.memories = STATE.memories.slice(0, 200);
+        MODULE_Storage.save();
+        return mem;
+    }
+
+    function deleteMemory(id) {
+        STATE.memories = STATE.memories.filter(m => m.id !== id);
+        MODULE_Storage.save();
+        render();
+    }
+
+    function clearAll() {
+        if (!confirm('Limpar TODAS as memórias? Isso não pode ser desfeito.')) return;
+        STATE.memories = [];
+        MODULE_Storage.save();
+        render();
+        MODULE_UI.toast('🗑️ Memórias limpas', 'success');
+    }
+
+    // Retorna as N memórias mais recentes formatadas para injetar no contexto
+    function getContextBlock() {
+        const n = parseInt(STATE.settings.memoryInjectCount) || 5;
+        if (n === 0 || !STATE.memories.length) return '';
+        const recent = STATE.memories.slice(0, n);
+        const lines = recent.map(m =>
+            `[${m.type.toUpperCase()}] ${m.content.substring(0, 300)}`
+        ).join('\n---\n');
+        return `\n\n🧠 MEMÓRIAS RECENTES (${recent.length}):\n${lines}`;
+    }
+
+    // Salva resumo da conversa como memória ao iniciar novo chat
+    function saveConvAsMemory(conv) {
+        if (!conv || !conv.messages || conv.messages.length < 2) return;
+        const userMsgs = conv.messages.filter(m => m.role === 'user').slice(-3);
+        const summary = `Conversa: "${conv.title}"\nTópicos: ${userMsgs.map(m => m.content.substring(0,100)).join(' | ')}`;
+        addMemory(summary, 'context', ['auto', 'conversa'], 'auto');
+    }
+
+    function exportMemory() {
+        const data = JSON.stringify({ memories: STATE.memories, exportedAt: new Date().toISOString() }, null, 2);
+        MODULE_Storage._download(data, `memorias-${Date.now()}.json`, 'application/json');
+        MODULE_UI.toast('💾 Memórias exportadas!', 'success');
+    }
+
+    function importMemory() {
+        document.getElementById('fileImportMemory').click();
+    }
+
+    function handleImport(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = ev => {
+            try {
+                const d = JSON.parse(ev.target.result);
+                const mems = d.memories || d;
+                if (Array.isArray(mems)) {
+                    STATE.memories = [...mems, ...STATE.memories];
+                    MODULE_Storage.save();
+                    render();
+                    MODULE_UI.toast(`✅ ${mems.length} memórias importadas!`, 'success');
+                }
+            } catch(err) {
+                MODULE_UI.toast('❌ Arquivo inválido', 'error');
+            }
+        };
+        reader.readAsText(file);
+        e.target.value = '';
+    }
+
+    return {
+        toggle, render, addManual, closeMemoryModal, saveManual,
+        addMemory, deleteMemory, clearAll, getContextBlock,
+        saveConvAsMemory, exportMemory, importMemory, handleImport
+    };
+})();
+
+/* ============================================================
+   MÓDULO: CHAT
+   ============================================================ */
+const MODULE_Chat = (() => {
+
+    function confirmNewChat() {
+        const conv = STATE.conversations[STATE.activeConvId];
+        // Se não tem conversa ativa ou está vazia, cria direto
+        if (!conv || !conv.messages || conv.messages.length === 0) {
+            _createNew();
+            return;
+        }
+        document.getElementById('newChatModal').classList.add('open');
+    }
+
+    function closeNewChatModal() {
+        document.getElementById('newChatModal').classList.remove('open');
+    }
+
+    function newChatAction(action) {
+        closeNewChatModal();
+        const conv = STATE.conversations[STATE.activeConvId];
+
+        if (action === 'save' || action === 'both') {
+            // Já está salvo automaticamente, apenas confirma
+            MODULE_UI.toast('💾 Conversa salva!', 'success');
+        }
+        if (action === 'memory' || action === 'both') {
+            MODULE_Brain.saveConvAsMemory(conv);
+            MODULE_UI.toast('🧠 Memória criada!', 'success');
+        }
+        // 'discard' apenas cria novo sem fazer nada
+
+        _createNew();
+    }
+
+    function _createNew() {
+        const id = 'conv_' + Date.now();
+        STATE.conversations[id] = {
+            id,
+            title:     'Nova Conversa',
+            messages:  [],
+            createdAt: Date.now(),
+            provider:  MODULE_Provider.current().provider,
+            model:     MODULE_Provider.current().model
+        };
+        STATE.activeConvId = id;
+        MODULE_Storage.save();
+        renderConversations();
+        _loadConv(id);
+        MODULE_UI.toast('✅ Novo chat iniciado!', 'success');
+    }
+
+    function _loadConv(id) {
+        STATE.activeConvId = id;
+        const conv = STATE.conversations[id];
+        if (!conv) return;
+        document.getElementById('convTitleEdit').value = conv.title;
+        renderMessages(conv.messages);
+        MODULE_Context.updateBar(conv.messages);
+        renderConversations();
+    }
+
+    function renameConv(title) {
+        const conv = STATE.conversations[STATE.activeConvId];
+        if (!conv || !title.trim()) return;
+        conv.title = title.trim();
+        renderConversations();
+        MODULE_Storage.save();
+    }
+
+    function deleteConv(id, e) {
+        e.stopPropagation();
+        if (!confirm('Deletar esta conversa?')) return;
+        delete STATE.conversations[id];
+        if (STATE.activeConvId === id) {
+            const keys = Object.keys(STATE.conversations);
+            if (keys.length > 0) _loadConv(keys[keys.length - 1]);
+            else _createNew();
+        }
+        MODULE_Storage.save();
+        renderConversations();
+    }
+
+    function renderConversations() {
+        const list = document.getElementById('convList');
+        list.innerHTML = '';
+        const convs = Object.values(STATE.conversations)
+            .sort((a, b) => b.createdAt - a.createdAt);
+        convs.forEach(conv => {
+            const div = document.createElement('div');
+            div.className = 'conv-item' + (conv.id === STATE.activeConvId ? ' active' : '');
+            div.innerHTML = `
+                <div style="flex:1;overflow:hidden">
+                    <div class="conv-title">${escapeHtml(conv.title)}</div>
+                    <div class="conv-meta">${conv.messages?.length || 0} msgs</div>
+                </div>
+                <span class="conv-delete" onclick="MODULE_Chat.deleteConv('${conv.id}',event)">✕</span>
+            `;
+            div.onclick = (e) => {
+                if (e.target.classList.contains('conv-delete')) return;
+                _loadConv(conv.id);
+            };
+            list.appendChild(div);
+        });
+    }
+
+    function renderMessages(messages) {
+        const container = document.getElementById('messages');
+        container.innerHTML = '';
+        (messages || []).forEach(msg => _appendMsg(msg));
+        container.scrollTop = container.scrollHeight;
+    }
+
+    function _appendMsg(msg) {
+        const container = document.getElementById('messages');
+        const div = document.createElement('div');
+        const roleClass = msg.role === 'user' ? 'user'
+                        : msg.role === 'system' ? 'system-msg'
+                        : msg.role === 'memory' ? 'memory-msg'
+                        : 'ai';
+        const emoji = msg.role === 'user' ? '👤'
+                    : msg.role === 'system' ? '⚙️'
+                    : msg.role === 'memory' ? '🧠'
+                    : '🤖';
+        div.className = `message ${roleClass}`;
+        const time = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString('pt-BR') : '';
+        div.innerHTML = `
+            <div class="avatar">${emoji}</div>
+            <div class="bubble">
+                ${formatMessage(msg.content)}
+                ${time ? `<div class="msg-time">${time}</div>` : ''}
+            </div>
+        `;
+        container.appendChild(div);
+        container.scrollTop = container.scrollHeight;
+        return div;
+    }
+
+    function _addLoadingMsg() {
+        const container = document.getElementById('messages');
+        const div = document.createElement('div');
+        div.className = 'message ai';
+        div.innerHTML = `<div class="avatar">🤖</div><div class="bubble"><div class="typing"><span></span><span></span><span></span></div></div>`;
+        container.appendChild(div);
+        container.scrollTop = container.scrollHeight;
+        return div;
+    }
+
+    async function send() {
+        if (STATE.isLoading) return;
+        const input = document.getElementById('userInput');
+        let text = input.value.trim();
+        if (!text) return;
+
+        const codeMode = document.getElementById('codeMode').checked;
+        const codeContent = document.getElementById('codeEditor').value.trim();
+        if (codeMode && codeContent) {
+            const lang = document.getElementById('codeLang').value;
+            text += `\n\n**Código no editor:**\n\`\`\`${lang}\n${codeContent}\n\`\`\``;
+        }
+
+        const conv = STATE.conversations[STATE.activeConvId];
+        if (!conv) { _createNew(); return; }
+
+        const userMsg = { role: 'user', content: text, timestamp: Date.now() };
+        conv.messages.push(userMsg);
+        _appendMsg(userMsg);
+
+        if (conv.messages.length === 1) {
+            conv.title = text.substring(0, 45) + (text.length > 45 ? '...' : '');
+            document.getElementById('convTitleEdit').value = conv.title;
+            renderConversations();
+        }
+
+        input.value = '';
+        MODULE_UI.autoResize(input);
+        MODULE_Context.updateBar(conv.messages);
+
+        STATE.isLoading = true;
+        document.getElementById('sendBtn').disabled = true;
+        const loader = _addLoadingMsg();
+
+        try {
+            let webCtx = '';
+            if (document.getElementById('webSearchCheck').checked) {
+                webCtx = await MODULE_WebSearch.search(text);
+            }
+
+            const reply = await MODULE_AI.call(conv.messages, webCtx);
+            loader.remove();
+
+            const aiMsg = { role: 'assistant', content: reply, timestamp: Date.now() };
+            conv.messages.push(aiMsg);
+            _appendMsg(aiMsg);
+
+            // Auto-extrai código para o editor
+            if (codeMode) {
+                const match = reply.match(/```(\w+)?\n?([\s\S]*?)```/);
+                if (match) {
+                    const clean = cleanCode(match[2]);
+                    const tab = STATE.codeTabs[STATE.activeCodeTab];
+                    if (tab) {
+                        tab.content  = clean;
+                        tab.language = match[1] || 'text';
+                        document.getElementById('codeEditor').value = clean;
+                        document.getElementById('codeLang').value = match[1] || 'text';
+                        MODULE_UI.toast('💻 Código extraído para o editor!', 'success');
+                    }
+                }
+            }
+
+            MODULE_Context.updateBar(conv.messages);
+            MODULE_Context.checkLimit(conv);
+            MODULE_Storage.save();
+
+        } catch(err) {
+            loader.remove();
+            const errMsg = { role: 'system', content: `❌ Erro: ${err.message}`, timestamp: Date.now() };
+            conv.messages.push(errMsg);
+            _appendMsg(errMsg);
+            MODULE_UI.toast('❌ ' + err.message, 'error');
+        }
+
+        STATE.isLoading = false;
+        document.getElementById('sendBtn').disabled = false;
+    }
+
+    return {
+        confirmNewChat, closeNewChatModal, newChatAction,
+        renameConv, deleteConv, renderConversations,
+        renderMessages, send
+    };
+})();
+
+/* ============================================================
+   MÓDULO: CONTEXTO
+   ============================================================ */
+const MODULE_Context = (() => {
+
+    function estimateTokens(messages) {
+        return Math.ceil((messages || []).reduce((a, m) => a + (m.content?.length || 0), 0) / 4);
+    }
+
+    function updateBar(messages) {
+        const tokens = estimateTokens(messages);
+        const limit  = parseInt(STATE.settings.contextLimit) || 8000;
+        const pct    = Math.min(100, (tokens / limit) * 100);
+        document.getElementById('tokenCount').textContent = tokens.toLocaleString('pt-BR');
+        const fill = document.getElementById('contextFill');
+        fill.style.width      = pct + '%';
+        fill.style.background = pct > 80 ? 'var(--red)' : pct > 55 ? 'var(--yellow)' : 'var(--green)';
+    }
+
+    function checkLimit(conv) {
+        const tokens = estimateTokens(conv.messages);
+        const limit  = parseInt(STATE.settings.contextLimit) || 8000;
+        if (tokens <= limit) return;
+        const strategy = STATE.settings.contextStrategy;
+        if (strategy === 'trim') {
+            while (estimateTokens(conv.messages) > limit && conv.messages.length > 4) {
+                conv.messages.splice(0, 1);
+            }
+            MODULE_UI.toast('✂️ Contexto trimado', 'success');
+        } else if (strategy === 'summarize') {
+            summarize();
+        } else {
+            MODULE_UI.toast('⚠️ Limite de contexto atingido!', 'warn');
+        }
+    }
+
+    function clear() {
+        const conv = STATE.conversations[STATE.activeConvId];
+        if (!conv) return;
+        if (!confirm('Limpar contexto? As mensagens serão mantidas visualmente mas a IA não vai lembrar delas.')) return;
+        conv.messages = [];
+        MODULE_Chat.renderMessages([]);
+        updateBar([]);
+        MODULE_Storage.save();
+        MODULE_UI.toast('✂️ Contexto limpo!', 'success');
+    }
+
+    async function summarize() {
+        const conv = STATE.conversations[STATE.activeConvId];
+        if (!conv || conv.messages.length < 4) {
+            MODULE_UI.toast('Poucas mensagens para resumir', 'error');
+            return;
+        }
+        MODULE_UI.toast('📋 Resumindo...', 'success');
+        const prompt = `Resuma esta conversa em bullet points técnicos concisos:\n\n${
+            conv.messages.map(m => `${m.role}: ${m.content.substring(0,400)}`).join('\n')
+        }`;
+        try {
+            const summary = await MODULE_AI.call([
+                { role: 'system', content: 'Resuma conversas de forma concisa e técnica.' },
+                { role: 'user',   content: prompt }
+            ]);
+            conv.messages = [{
+                role: 'system',
+                content: `📋 Resumo da conversa anterior:\n${summary}`,
+                timestamp: Date.now()
+            }];
+            MODULE_Chat.renderMessages(conv.messages);
+            updateBar(conv.messages);
+            MODULE_Storage.save();
+            MODULE_UI.toast('✅ Contexto resumido!', 'success');
+                } catch(e) {
+            MODULE_UI.toast('❌ Erro ao resumir: ' + e.message, 'error');
+        }
+    }
+
+    // Monta as mensagens respeitando o limite de contexto
+    function buildMessages(messages, webCtx) {
+        const s = STATE.settings;
+        let sysContent = s.systemPrompt ||
+            'Você é um assistente especialista em programação. Gere código limpo, sem caracteres estranhos, comentado em português.';
+
+        // Injeta memórias do cérebro
+        sysContent += MODULE_Brain.getContextBlock();
+
+        if (webCtx) sysContent += `\n\n🌐 RESULTADOS WEB:\n${webCtx}`;
+
+        const sys = [{ role: 'system', content: sysContent }];
+        const limit = parseInt(s.contextLimit) || 8000;
+        let tokenCount = sysContent.length / 4;
+        const filtered = [];
+
+        for (let i = messages.length - 1; i >= 0; i--) {
+            const msg = messages[i];
+            if (msg.role === 'system' || msg.role === 'memory') continue;
+            const cost = (msg.content?.length || 0) / 4;
+            if (tokenCount + cost > limit && filtered.length > 0) break;
+            tokenCount += cost;
+            filtered.unshift({
+                role:    msg.role === 'assistant' ? 'assistant' : 'user',
+                content: msg.content
+            });
+        }
+
+        return [...sys, ...filtered];
+    }
+
+    return { estimateTokens, updateBar, checkLimit, clear, summarize, buildMessages };
+})();
+
+/* ============================================================
+   MÓDULO: AI (chamadas às APIs)
+   ============================================================ */
+const MODULE_AI = (() => {
+
+    async function call(messages, webCtx = '') {
+        const { provider, model } = MODULE_Provider.current();
+        const s    = STATE.settings;
+        const temp = parseFloat(document.getElementById('tempSlider').value);
+        const maxT = parseInt(document.getElementById('maxTokens').value);
+        const msgs = MODULE_Context.buildMessages(messages, webCtx);
+
+        switch (provider) {
+            case 'openai':      return await _openai(msgs, model, s.apiKey, temp, maxT);
+            case 'anthropic':   return await _anthropic(msgs, model, s.anthropicKey, temp, maxT);
+            case 'gemini':      return await _gemini(msgs, model, s.geminiKey, temp, maxT);
+            case 'groq':        return await _groq(msgs, model, s.apiKey, temp, maxT);
+            case 'openrouter':  return await _openrouter(msgs, model, s.apiKey, temp, maxT);
+            case 'ollama':      return await _ollama(msgs, model, temp, maxT);
+            default: throw new Error('Provider não suportado');
+        }
+    }
+
+    async function _openai(messages, model, apiKey, temp, maxTokens) {
+        if (!apiKey) throw new Error('API Key OpenAI não configurada! Vá em ⚙️ Config');
+        const res = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type':  'application/json',
+                'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({ model, messages, temperature: temp, max_tokens: maxTokens })
+        });
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.error?.message || `OpenAI HTTP ${res.status}`);
+        }
+        const data = await res.json();
+        return data.choices[0].message.content;
+    }
+
+    async function _anthropic(messages, model, apiKey, temp, maxTokens) {
+        if (!apiKey) throw new Error('API Key Anthropic não configurada! Vá em ⚙️ Config');
+        const system = messages.find(m => m.role === 'system')?.content || '';
+        const msgs   = messages.filter(m => m.role !== 'system');
+        const res = await fetch('https://api.anthropic.com/v1/messages', {
+            method: 'POST',
+            headers: {
+                'Content-Type':      'application/json',
+                'x-api-key':         apiKey,
+                'anthropic-version': '2023-06-01'
+            },
+            body: JSON.stringify({ model, messages: msgs, system, temperature: temp, max_tokens: maxTokens })
+        });
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.error?.message || `Anthropic HTTP ${res.status}`);
+        }
+        const data = await res.json();
+        return data.content[0].text;
+    }
+
+    async function _gemini(messages, model, apiKey, temp, maxTokens) {
+        if (!apiKey) throw new Error('API Key Gemini não configurada! Vá em ⚙️ Config');
+        const contents = messages
+            .filter(m => m.role !== 'system')
+            .map(m => ({
+                role:  m.role === 'assistant' ? 'model' : 'user',
+                parts: [{ text: m.content }]
+            }));
+        const res = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+            {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents,
+                    generationConfig: { temperature: temp, maxOutputTokens: maxTokens }
+                })
+            }
+        );
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.error?.message || `Gemini HTTP ${res.status}`);
+        }
+        const data = await res.json();
+        return data.candidates[0].content.parts[0].text;
+    }
+
+    async function _groq(messages, model, apiKey, temp, maxTokens) {
+        if (!apiKey) throw new Error('API Key Groq não configurada! Vá em ⚙️ Config');
+        const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type':  'application/json',
+                'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({ model, messages, temperature: temp, max_tokens: maxTokens })
+        });
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.error?.message || `Groq HTTP ${res.status}`);
+        }
+        const data = await res.json();
+        return data.choices[0].message.content;
+    }
+
+    async function _openrouter(messages, model, apiKey, temp, maxTokens) {
+        if (!apiKey) throw new Error('API Key OpenRouter não configurada! Vá em ⚙️ Config');
+        const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type':  'application/json',
+                'Authorization': `Bearer ${apiKey}`,
+                'HTTP-Referer':  window.location.href,
+                'X-Title':       'AI Code Studio'
+            },
+            body: JSON.stringify({ model, messages, temperature: temp, max_tokens: maxTokens })
+        });
+        if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.error?.message || `OpenRouter HTTP ${res.status}`);
+        }
+        const data = await res.json();
+        return data.choices[0].message.content;
+    }
+
+    async function _ollama(messages, model, temp, maxTokens) {
+        const url = STATE.settings.ollamaUrl || 'http://localhost:11434';
+        const res = await fetch(`${url}/api/chat`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                model,
+                messages: messages.map(m => ({ role: m.role, content: m.content })),
+                options:  { temperature: temp, num_predict: maxTokens },
+                stream:   false
+            })
+        });
+        if (!res.ok) throw new Error(`Ollama HTTP ${res.status} — servidor rodando?`);
+        const data = await res.json();
+        return data.message.content;
+    }
+
+    return { call };
+})();
+
+/* ============================================================
+   MÓDULO: WEB SEARCH
+   ============================================================ */
+const MODULE_WebSearch = (() => {
+
+    async function search(query) {
+        const key = STATE.settings.serperKey;
+        if (!key) {
+            MODULE_UI.toast('⚠️ Configure a Serper Key em ⚙️ Config', 'warn');
+            return '';
+        }
+        try {
+            const res = await fetch('https://google.serper.dev/search', {
+                method:  'POST',
+                headers: { 'Content-Type': 'application/json', 'X-API-KEY': key },
+                body:    JSON.stringify({ q: query, num: 5, hl: 'pt' })
+            });
+            const data = await res.json();
+            return (data.organic || []).slice(0, 5)
+                .map(r => `**${r.title}**\n${r.snippet}\n${r.link}`)
+                .join('\n\n');
+        } catch(e) {
+            MODULE_UI.toast('⚠️ Erro na busca web', 'warn');
+            return '';
+        }
+    }
+
+    return { search };
+})();
+
+/* ============================================================
+   MÓDULO: CÓDIGO (editor + tabs)
+   ============================================================ */
+const MODULE_Code = (() => {
+
+    function togglePanel() {
+        document.getElementById('codePanel').classList.toggle('collapsed');
+    }
+
+    function newTab(name = null) {
+        const tab = {
+            id:       'tab_' + Date.now(),
+            name:     name || `código_${STATE.codeTabs.length + 1}`,
+            content:  '',
+            language: 'javascript'
+        };
+        STATE.codeTabs.push(tab);
+        STATE.activeCodeTab = STATE.codeTabs.length - 1;
+        renderTabs();
+        _loadTab(STATE.activeCodeTab);
+        MODULE_Storage.save();
+    }
+
+    function renderTabs() {
+        const container = document.getElementById('codeTabs');
+        container.innerHTML = '';
+        STATE.codeTabs.forEach((tab, i) => {
+            const div = document.createElement('div');
+            div.className = 'code-tab' + (i === STATE.activeCodeTab ? ' active' : '');
+            div.innerHTML = `
+                <span onclick="MODULE_Code.switchTab(${i})">${escapeHtml(tab.name)}</span>
+                <span class="code-tab-close" onclick="MODULE_Code.closeTab(${i},event)">✕</span>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    function switchTab(i) {
+        _saveCurrentTab();
+        STATE.activeCodeTab = i;
+        _loadTab(i);
+        renderTabs();
+    }
+
+    function closeTab(i, e) {
+        e.stopPropagation();
+        if (STATE.codeTabs.length === 1) { MODULE_UI.toast('Mínimo 1 tab', 'error'); return; }
+        STATE.codeTabs.splice(i, 1);
+        if (STATE.activeCodeTab >= STATE.codeTabs.length) STATE.activeCodeTab = STATE.codeTabs.length - 1;
+        renderTabs();
+        _loadTab(STATE.activeCodeTab);
+        MODULE_Storage.save();
+    }
+
+    function _loadTab(i) {
+        const tab = STATE.codeTabs[i];
+        if (!tab) return;
+        document.getElementById('codeEditor').value   = tab.content;
+        document.getElementById('codeLang').value     = tab.language || 'javascript';
+    }
+
+    function _saveCurrentTab() {
+        const tab = STATE.codeTabs[STATE.activeCodeTab];
+        if (!tab) return;
+        tab.content  = document.getElementById('codeEditor').value;
+        tab.language = document.getElementById('codeLang').value;
+    }
+
+    function copyClean() {
+        _saveCurrentTab();
+        const code = cleanCode(document.getElementById('codeEditor').value);
+        navigator.clipboard.writeText(code).then(() => {
+            MODULE_UI.toast('✅ Código limpo copiado!', 'success');
+        });
+    }
+
+    function sendToChat() {
+        _saveCurrentTab();
+        const code = document.getElementById('codeEditor').value.trim();
+        const lang = document.getElementById('codeLang').value;
+        if (!code) { MODULE_UI.toast('Editor vazio!', 'error'); return; }
+        const input = document.getElementById('userInput');
+        input.value = `Analise e melhore este código:\n\`\`\`${lang}\n${code}\n\`\`\``;
+        MODULE_UI.autoResize(input);
+        input.focus();
+    }
+
+    function clear() {
+        if (!confirm('Limpar editor?')) return;
+        document.getElementById('codeEditor').value = '';
+        _saveCurrentTab();
+    }
+
+    function download() {
+        _saveCurrentTab();
+        const tab = STATE.codeTabs[STATE.activeCodeTab];
+        const code = cleanCode(tab.content);
+        const extMap = {
+            javascript:'js', python:'py', html:'html', css:'css',
+            typescript:'ts', java:'java', csharp:'cs', cpp:'cpp',
+            php:'php', sql:'sql', rust:'rs', go:'go', bash:'sh', text:'txt'
+        };
+        const ext = extMap[tab.language] || 'txt';
+        MODULE_Storage._download(code, `${tab.name}.${ext}`, 'text/plain');
+        MODULE_UI.toast('⬇️ Download iniciado!', 'success');
+    }
+
+    async function pasteToEditor() {
+        try {
+            const text = await navigator.clipboard.readText();
+            if (!text) { MODULE_UI.toast('Clipboard vazio', 'error'); return; }
+            const looksLikeCode = /[{}();=><\/\\]/.test(text) || /def |function |class |import /.test(text);
+            if (looksLikeCode) {
+                const toEditor = confirm('Parece código!\n\nOK = Colar no Editor\nCancelar = Colar no Chat');
+                if (toEditor) {
+                    document.getElementById('codeEditor').value = text;
+                    _saveCurrentTab();
+                    MODULE_UI.toast('✅ Colado no editor!', 'success');
+                    return;
+                }
+            }
+            const input = document.getElementById('userInput');
+            input.value += text;
+            MODULE_UI.autoResize(input);
+            MODULE_UI.toast('✅ Colado no chat!', 'success');
+        } catch(e) {
+            MODULE_UI.toast('❌ Sem permissão para clipboard', 'error');
+        }
+    }
+
+    function importFile() {
+        document.getElementById('fileImportCode').click();
+    }
+
+    function handleFileImport(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = ev => {
+            const extMap = {
+                js:'javascript', py:'python', html:'html', css:'css',
+                ts:'typescript', java:'java', cs:'csharp', cpp:'cpp',
+                php:'php', sql:'sql', rs:'rust', go:'go', sh:'bash'
+            };
+            const ext  = file.name.split('.').pop().toLowerCase();
+            const lang = extMap[ext] || 'text';
+            newTab(file.name);
+            const tab    = STATE.codeTabs[STATE.activeCodeTab];
+            tab.content  = ev.target.result;
+            tab.language = lang;
+            document.getElementById('codeEditor').value = ev.target.result;
+            document.getElementById('codeLang').value   = lang;
+            renderTabs();
+            MODULE_Storage.save();
+            MODULE_UI.toast(`📂 ${file.name} importado!`, 'success');
+        };
+        reader.readAsText(file);
+        e.target.value = '';
+    }
+
+    // Expõe _saveCurrentTab para uso externo
+    function saveCurrentTab() { _saveCurrentTab(); }
+
+    return {
+        togglePanel, newTab, renderTabs, switchTab, closeTab,
+        copyClean, sendToChat, clear, download,
+        pasteToEditor, importFile, handleFileImport, saveCurrentTab
+    };
+})();
+
+/* ============================================================
+   MÓDULO: SETTINGS
+   ============================================================ */
+const MODULE_Settings = (() => {
+
+    function open() {
+        const s = STATE.settings;
+        document.getElementById('apiKeyInput').value        = s.apiKey        || '';
+        document.getElementById('anthropicKeyInput').value  = s.anthropicKey  || '';
+        document.getElementById('geminiKeyInput').value     = s.geminiKey     || '';
+        document.getElementById('serperKeyInput').value     = s.serperKey     || '';
+        document.getElementById('ollamaUrl').value          = s.ollamaUrl     || 'http://localhost:11434';
+        document.getElementById('contextLimit').value       = s.contextLimit  || 8000;
+        document.getElementById('ctxVal').textContent       = s.contextLimit  || 8000;
+        document.getElementById('contextStrategy').value    = s.contextStrategy || 'trim';
+        document.getElementById('systemPrompt').value       = s.systemPrompt  || '';
+        document.getElementById('autoSaveInterval').value   = s.autoSaveInterval || 30;
+        document.getElementById('memoryInjectCount').value  = s.memoryInjectCount || 5;
+        document.getElementById('autoMemory').value         = s.autoMemory    || '1';
+        document.getElementById('settingsModal').classList.add('open');
+    }
+
+    function close() {
+        document.getElementById('settingsModal').classList.remove('open');
+    }
+
+    function save() {
+        const s = STATE.settings;
+        s.apiKey             = document.getElementById('apiKeyInput').value;
+        s.anthropicKey       = document.getElementById('anthropicKeyInput').value;
+        s.geminiKey          = document.getElementById('geminiKeyInput').value;
+        s.serperKey          = document.getElementById('serperKeyInput').value;
+        s.ollamaUrl          = document.getElementById('ollamaUrl').value;
+        s.contextLimit       = parseInt(document.getElementById('contextLimit').value);
+        s.contextStrategy    = document.getElementById('contextStrategy').value;
+        s.systemPrompt       = document.getElementById('systemPrompt').value;
+        s.autoSaveInterval   = parseInt(document.getElementById('autoSaveInterval').value);
+        s.memoryInjectCount  = parseInt(document.getElementById('memoryInjectCount').value);
+        s.autoMemory         = document.getElementById('autoMemory').value;
+        s.provider           = document.getElementById('aiProvider').value;
+        s.model              = document.getElementById('modelSelect').value;
+        s.temperature        = parseFloat(document.getElementById('tempSlider').value);
+        s.maxTokens          = parseInt(document.getElementById('maxTokens').value);
+        MODULE_Storage.save();
+        MODULE_Storage.setupAutoSave();
+        close();
+        MODULE_UI.toast('✅ Configurações salvas!', 'success');
+    }
+
+    return { open, close, save };
+})();
+
+/* ============================================================
+   MÓDULO: UI (helpers visuais)
+   ============================================================ */
+const MODULE_UI = (() => {
+
+    function toast(msg, type = '') {
+        const el = document.getElementById('toast');
+        el.textContent = msg;
+        el.className   = `toast show ${type}`;
+        clearTimeout(el._t);
+        el._t = setTimeout(() => { el.className = 'toast'; }, 3000);
+    }
+
+    function autoResize(el) {
+        el.style.height = 'auto';
+        el.style.height = Math.min(el.scrollHeight, 180) + 'px';
+    }
+
+    function handleKey(e) {
+        if (e.ctrlKey && e.key === 'Enter') {
+            e.preventDefault();
+            MODULE_Chat.send();
+        }
+    }
+
+    function togglePass(id) {
+        const el = document.getElementById(id);
+        el.type = el.type === 'password' ? 'text' : 'password';
+    }
+
+    return { toast, autoResize, handleKey, togglePass };
+})();
+
+/* ============================================================
+   FUNÇÕES UTILITÁRIAS GLOBAIS
+   ============================================================ */
+function escapeHtml(text) {
+    return String(text)
+        .replace(/&/g,'&amp;')
+        .replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;');
+}
+
+function cleanCode(code) {
+    return String(code)
+        .replace(/\r\n/g,'\n')
+        .replace(/\r/g,'\n')
+        .replace(/[\u200B-\u200D\uFEFF]/g,'')
+        .replace(/\u00A0/g,' ')
+        .replace(/[""]/g,'"')
+        .replace(/['']/g,"'")
+        .replace(/…/g,'...')
+        .trim();
+}
+
+function formatMessage(text) {
+    text = String(text);
+    // Blocos de código
+    text = text.replace(/```(\w+)?\n?([\s\S]*?)```/g, (_, lang, code) => {
+        const clean = escapeHtml(cleanCode(code.trim()));
+        return `<pre><button class="copy-code-btn" onclick="copyCodeBlock(this)">📋 Copiar</button><code class="lang-${lang||'code'}">${clean}</code></pre>`;
+    });
+    // Negrito
+    text = text.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>');
+    // Inline code
+    text = text.replace(/`([^`]+)`/g,'<code style="background:var(--bg3);padding:1px 5px;border-radius:3px;font-family:monospace">$1</code>');
+    // Quebras de linha
+    text = text.replace(/\n/g,'<br>');
+    return text;
+}
+
+function copyCodeBlock(btn) {
+    const code = cleanCode(btn.nextElementSibling.textContent);
+    navigator.clipboard.writeText(code).then(() => {
+        btn.textContent = '✅ Copiado!';
+        setTimeout(() => btn.textContent = '📋 Copiar', 2000);
+    });
+}
+
+/* ============================================================
+   FECHAR MODAIS CLICANDO FORA
+   ============================================================ */
+['settingsModal','newChatModal','memoryModal'].forEach(id => {
+    document.getElementById(id).addEventListener('click', function(e) {
+        if (e.target === this) this.classList.remove('open');
+    });
+});
+
+/* ============================================================
+   AUTO-SAVE DO EDITOR AO DIGITAR
+   ============================================================ */
+document.getElementById('codeEditor').addEventListener('input', () => {
+    MODULE_Code.saveCurrentTab();
+});
+
+document.getElementById('modelSelect').addEventListener('change', () => {
+    STATE.settings.model = document.getElementById('modelSelect').value;
+    MODULE_Storage.save();
+});
+
+/* ============================================================
+   INICIALIZAÇÃO
+   ============================================================ */
+function INIT() {
+    MODULE_Storage.load();
+
+    // Restaura UI das settings
+    const s = STATE.settings;
+    if (s.provider) document.getElementById('aiProvider').value = s.provider;
+    if (s.maxTokens) document.getElementById('maxTokens').value = s.maxTokens;
+    if (s.temperature) {
+        document.getElementById('tempSlider').value = s.temperature;
+        document.getElementById('tempVal').textContent = s.temperature;
+    }
+
+    MODULE_Provider.updateSelect();
+    MODULE_Chat.renderConversations();
+    MODULE_Brain.render();
+
+    // Carrega conversa ativa ou cria nova
+    if (STATE.activeConvId && STATE.conversations[STATE.activeConvId]) {
+        // Dispara loadConv via click na conversa ativa
+        const conv = STATE.conversations[STATE.activeConvId];
+        document.getElementById('convTitleEdit').value = conv.title;
+        MODULE_Chat.renderMessages(conv.messages);
+        MODULE_Context.updateBar(conv.messages);
+    } else {
+        MODULE_Chat.confirmNewChat();
+    }
+
+    // Tabs de código
+    if (STATE.codeTabs.length === 0) {
+        MODULE_Code.newTab();
+    } else {
+        MODULE_Code.renderTabs();
+        // Carrega tab ativa
+        const tab = STATE.codeTabs[STATE.activeCodeTab];
+        if (tab) {
+            document.getElementById('codeEditor').value = tab.content || '';
+            document.getElementById('codeLang').value   = tab.language || 'javascript';
+        }
+    }
+
+    MODULE_Storage.setupAutoSave();
+    MODULE_UI.toast('🚀 AI Code Studio pronto!', 'success');
+}
+
+INIT();
+</script>
+
+
+</body></html>
